@@ -71,29 +71,29 @@ global_random = random.Random(SEED_42)
 
 
 def decode_png_img(img):
-    # img = tf.image.decode_png(img, channels=IMG_CHANNELS)
-    # img = tf.image.convert_image_dtype(img, tf.uint8)
-    print(img)
-    img = imread(img)[:, :, :IMG_CHANNELS]
+    img = tf.image.decode_png(img, channels=IMG_CHANNELS)
+    img = tf.image.convert_image_dtype(img, tf.uint8)
+    # print(img)
+    # img = imread(img)[:, :, :IMG_CHANNELS]
     # img = one_hot_enc(img.numpy())
-    img = tf.convert_to_tensor(img, tf.uint8)
+    # img = tf.convert_to_tensor(img, tf.uint8)
 
     return img
 
 
 def decode_tif_img(img):
     # img = tf.image.decode_image(img, channels=N_OF_LABELS, dtype=tf.dtypes.uint8)
-    img = tf.image.decode_png(img, channels=IMG_CHANNELS)
-    img = imread(img)[:, :, :IMG_CHANNELS]
+    img = tf.image.decode_png(img, channels=1)
+    # img = imread(img)[:, :, :IMG_CHANNELS]
     # img = one_hot_enc(img.numpy())
-    img = tf.convert_to_tensor(img, tf.uint8)
-    # img = tf.image.convert_image_dtype(img, tf.uint8)
+    # img = tf.convert_to_tensor(img, tf.uint8)
+    img = tf.image.convert_image_dtype(img, tf.uint8)
 
     return img
 
+
 # actually loads an image, its maks and returns the pair
 def combine_img_masks(original_path: tf.Tensor, segmented_path: tf.Tensor):
-
     original_image = tf.io.read_file(original_path)
     original_image = decode_png_img(original_image)
 
@@ -105,8 +105,6 @@ def combine_img_masks(original_path: tf.Tensor, segmented_path: tf.Tensor):
 class DataSetTool:
     def __init__(self):
         pass
-
-
 
     def to_limited_label_mask(self, mask):
         encoded_img = np.zeros((IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
@@ -124,7 +122,6 @@ class DataSetTool:
                     encoded_img[row_idx][col_idx] = labels_limited[OTHER_LABEL_IDX]
 
         return encoded_img
-
 
     def get_max_channel_idx(self, image_channels):
         max_idx = 0
@@ -191,16 +188,24 @@ class DataSetTool:
         for th in aug_threads:
             th.join()
 
-    # resize extracted segmented
+    # resize extracted segmented and
     def resize_segmented(self):
         ids = os.listdir(PARENT_DIR + DST_SEGMENTED_PATH)
         for n, id_ in tqdm(enumerate(ids), total=len(ids)):
             path = PARENT_DIR + DST_SEGMENTED_PATH + id_.split('.')[0] + '.png'
-            img = cv2.imread(path, cv2.IMREAD_COLOR)
+            img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
             resized_img = cv2.resize(img, (IMG_WIDTH, IMG_HEIGHT), interpolation=cv2.INTER_NEAREST)
 
-            cv2.imwrite(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + id_, resized_img)
+            for i in range(0, resized_img.shape[0]):
+                for j in range(0, resized_img.shape[1]):
+                    # pick a class "paved area"
+                    # if label does not represent the road, make it 0
+                    if resized_img[i][j] == 255:
+                        resized_img[i][j] = 1
+                    else:
+                        resized_img[i][j] = 0
 
+            cv2.imwrite(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + id_, resized_img)
 
     # resize extracted original
     def resize_original(self):
@@ -288,7 +293,7 @@ class DataSetTool:
         for n, id_ in tqdm(enumerate(data_fragment), total=len(data_fragment)):
             # print(DST_PARENT_DIR + ORIGINAL_RESIZED_PATH + id_)
             original_img = imread(root_orig_path + id_)[:, :, :IMG_CHANNELS]
-            segmented_img = imread(root_segm_path + id_)[:, :, :IMG_CHANNELS]
+            segmented_img = imread(root_segm_path + id_)
             aug_originals = []
             aug_segmented = []
 
@@ -388,8 +393,8 @@ class DataSetTool:
                 rgb_orig = cv2.cvtColor(aug_originals[i], cv2.COLOR_BGR2RGB)
                 cv2.imwrite(root_orig_path + id_.split('.')[0] + '_' + str((i + 1)) + '.png', rgb_orig)
                 # saves all the augmented segmented
-                rgb_segm = cv2.cvtColor(aug_segmented[i], cv2.COLOR_BGR2RGB)
-                cv2.imwrite(root_segm_path + id_.split('.')[0] + '_' + str((i + 1)) + '.png', rgb_segm)
+                # gs_segm = cv2.cvtColor(aug_segmented[i], cv2.COLOR_BGR2GRAY)
+                cv2.imwrite(root_segm_path + id_.split('.')[0] + '_' + str((i + 1)) + '.png', aug_segmented[i])
 
         pass
 
@@ -420,14 +425,98 @@ class DataSetTool:
                                 num_parallel_calls=4,
                                 deterministic=False)
 
-        # train_ds_batched = train_ds.batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE).cache()
-        train_ds_batched = train_ds.batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
-        # print(train_ds.element_spec)
-        # train_ds.prefetch(10)
-        # for image, label in train_ds.take(1):
-        #     print(image.shape)
-        #     print(label.shape)
-        #     print()
+        ds_batched = train_ds.batch(BATCH_SIZE).prefetch(tf.data.experimental.AUTOTUNE)
 
-        # exit(1)
-        return train_ds_batched
+        train_ds_batched = ds_batched.take(round(len(originals_ids) * 0.8))
+        validation_ds_batched = ds_batched.skip(round(len(originals_ids) * 0.8))
+        #
+        # train_ds_batched = tf.compat.v1.data.make_initializable_iterator(train_ds_batched)
+        # validation_ds_batched = tf.compat.v1.data.make_initializable_iterator(validation_ds_batched)
+        #
+        # train_ds_batched = tf.compat.v1.Session.run(train_ds_batched.initializer)
+        # validation_ds_batched = tf.compat.v1.Session.run(validation_ds_batched.initializer)
+
+        return train_ds_batched, validation_ds_batched
+
+    def get_data_set(self):
+        train_ids = os.listdir(PARENT_DIR + ORIGINAL_RESIZED_PATH)
+
+        X_train = np.zeros((len(train_ids), IMG_WIDTH, IMG_HEIGHT, IMG_CHANNELS), dtype=np.uint8)
+        Y_train = np.zeros((len(train_ids), IMG_WIDTH, IMG_HEIGHT), dtype=np.bool)
+
+        for n, id_ in tqdm(enumerate(train_ids), total=len(train_ids)):
+            # Actual train image
+            # print(DST_PARENT_DIR + ORIGINAL_PATH + id_)
+            img = imread(PARENT_DIR + ORIGINAL_RESIZED_PATH + id_.split(".")[0] + '.png')[:, :, :IMG_CHANNELS]
+            X_train[n] = img
+            mask = imread(PARENT_DIR + SEGMENTED_RESIZED_PATH + id_.split(".")[0] + '.png')
+            Y_train[n] = mask
+
+        return X_train, Y_train
+
+    def decode_binary_mask(self, mask):
+        return_array = np.zeros((IMG_HEIGHT, IMG_WIDTH, 1), dtype=np.uint8)
+        for row_idx in range(0, mask.shape[0]):
+            for col_idx in range(0, mask.shape[1]):
+                if mask[row_idx][col_idx] == 1:
+                    return_array[row_idx][col_idx] = 255
+
+        return return_array
+
+    def manual_model_testing(self, model):
+        current_day = datetime.datetime.now()
+        train_ids = os.listdir(PARENT_DIR + ORIGINAL_RESIZED_PATH)
+        random_images_idx = random.sample(train_ids, 100)
+        X_train = np.zeros((100, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+        ground_truth = np.zeros((100, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+
+        for n, id_ in tqdm(enumerate(random_images_idx), total=len(random_images_idx)):
+            img = imread(DST_PARENT_DIR + ORIGINAL_RESIZED_PATH + train_ids[n])[:, :,
+                  :IMG_CHANNELS]
+            X_train[n] = img
+
+            mask = imread(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + train_ids[n].split('.')[0] + '.png')
+
+            ground_truth[n] = self.decode_binary_mask(mask)
+
+        preds_train = model.predict(X_train, verbose=1)
+
+        # Binarizationing the results
+        preds_train_t = (preds_train > 0.5).astype(np.uint8)
+
+        print("Enter 0 to exit, any other number to predict another image: ")
+        continue_flag = input()
+
+        while int(continue_flag) > 0:
+            i = random.randint(0, len(preds_train_t))
+
+            trainPath = "%s%sstrain%03d.png" % (RESULTS_PATH, LABEL_TYPES_PATH, i)
+            controlPath = "%s%scontrolMask%03d.png" % (
+                RESULTS_PATH, LABEL_TYPES_PATH + str(current_day.month).zfill(2) + str(current_day.day).zfill(2) + '/',
+                i)
+            predictionPath = "%s%sprediction%03d.png" % (
+                RESULTS_PATH, LABEL_TYPES_PATH + str(current_day.month).zfill(2) + str(current_day.day).zfill(2) + '/',
+                i)
+
+            today_result_dir = RESULTS_PATH + LABEL_TYPES_PATH + str(current_day.month).zfill(2) + str(
+                current_day.day).zfill(2)
+            if not os.path.exists(today_result_dir):
+                os.mkdir(today_result_dir)
+
+            imshow(X_train[i])
+            plt.savefig(trainPath)
+            plt.show()
+
+            imshow(np.squeeze(ground_truth[i]))
+            plt.savefig(controlPath)
+            plt.show()
+
+            # interpreted_prediction = data_set.parse_prediction(preds_train[i], labels_limited)
+            imshow(np.squeeze(preds_train_t[i]))
+            plt.savefig(predictionPath)
+            plt.show()
+
+            print("Enter 0 to exit, any positive number to predict another image: ")
+            continue_flag = input()
+
+
