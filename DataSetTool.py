@@ -64,6 +64,7 @@ one_hot_labels = {
     2: [0, 0, 1],  # background
 }
 
+
 N_OF_LABELS = len(labels)
 seed = np.random.seed(42)
 SEED_42 = 42
@@ -200,10 +201,10 @@ class DataSetTool:
                 for j in range(0, resized_img.shape[1]):
                     # pick a class "paved area"
                     # if label does not represent the road, make it 0
-                    if resized_img[i][j] == 255:
-                        resized_img[i][j] = 1
+                    if resized_img[i][j] != 255:
+                        resized_img[i][j] = 0.0
                     else:
-                        resized_img[i][j] = 0
+                        resized_img[i][j] = 1.0
 
             cv2.imwrite(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + id_, resized_img)
 
@@ -315,41 +316,41 @@ class DataSetTool:
             flip_o_h_270 = cv2.flip(rot_o_270, 1)
             aug_originals.append(flip_o_h_270)
 
-            # brighter images
-            brighter_o_ = cv2.add(original_img, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_)
-            brighter_o_rot_o_90 = cv2.add(rot_o_90, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_rot_o_90)
-            brighter_o_rot_o_180 = cv2.add(rot_o_180, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_rot_o_180)
-            brighter_o_rot_o_270 = cv2.add(rot_o_270, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_rot_o_270)
-            brighter_o_flip_o_h_org = cv2.add(flip_o_h_org, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_flip_o_h_org)
-            brighter_o_flip_o_h_90 = cv2.add(flip_o_h_90, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_flip_o_h_90)
-            brighter_o_flip_o_h_180 = cv2.add(flip_o_h_180, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_flip_o_h_180)
-            brighter_o_flip_o_h_270 = cv2.add(flip_o_h_270, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(brighter_o_flip_o_h_270)
-
-            # dimmer images
-            dimmer_o_ = cv2.subtract(original_img, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_)
-            dimmer_o_rot_o_90 = cv2.subtract(rot_o_90, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_rot_o_90)
-            dimmer_o_rot_o_180 = cv2.subtract(rot_o_180, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_rot_o_180)
-            dimmer_o_rot_o_270 = cv2.subtract(rot_o_270, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_rot_o_270)
-            dimmer_o_flip_o_h_org = cv2.subtract(flip_o_h_org, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_flip_o_h_org)
-            dimmer_o_flip_o_h_90 = cv2.subtract(flip_o_h_90, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_flip_o_h_90)
-            dimmer_o_flip_o_h_180 = cv2.subtract(flip_o_h_180, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_flip_o_h_180)
-            dimmer_o_flip_o_h_270 = cv2.subtract(flip_o_h_270, np.array([random.randint(50, 80) / 1.0]))
-            aug_originals.append(dimmer_o_flip_o_h_270)
+            # # brighter images
+            # brighter_o_ = cv2.add(original_img, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_)
+            # brighter_o_rot_o_90 = cv2.add(rot_o_90, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_rot_o_90)
+            # brighter_o_rot_o_180 = cv2.add(rot_o_180, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_rot_o_180)
+            # brighter_o_rot_o_270 = cv2.add(rot_o_270, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_rot_o_270)
+            # brighter_o_flip_o_h_org = cv2.add(flip_o_h_org, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_flip_o_h_org)
+            # brighter_o_flip_o_h_90 = cv2.add(flip_o_h_90, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_flip_o_h_90)
+            # brighter_o_flip_o_h_180 = cv2.add(flip_o_h_180, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_flip_o_h_180)
+            # brighter_o_flip_o_h_270 = cv2.add(flip_o_h_270, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(brighter_o_flip_o_h_270)
+            #
+            # # dimmer images
+            # dimmer_o_ = cv2.subtract(original_img, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_)
+            # dimmer_o_rot_o_90 = cv2.subtract(rot_o_90, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_rot_o_90)
+            # dimmer_o_rot_o_180 = cv2.subtract(rot_o_180, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_rot_o_180)
+            # dimmer_o_rot_o_270 = cv2.subtract(rot_o_270, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_rot_o_270)
+            # dimmer_o_flip_o_h_org = cv2.subtract(flip_o_h_org, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_flip_o_h_org)
+            # dimmer_o_flip_o_h_90 = cv2.subtract(flip_o_h_90, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_flip_o_h_90)
+            # dimmer_o_flip_o_h_180 = cv2.subtract(flip_o_h_180, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_flip_o_h_180)
+            # dimmer_o_flip_o_h_270 = cv2.subtract(flip_o_h_270, np.array([random.randint(50, 80) / 1.0]))
+            # aug_originals.append(dimmer_o_flip_o_h_270)
 
             # same operations for segmented data
             rot_s_90 = cv2.rotate(segmented_img, cv2.ROTATE_90_CLOCKWISE)
@@ -368,25 +369,25 @@ class DataSetTool:
             flip_s_h_270 = cv2.flip(rot_s_270, 1)
             aug_segmented.append(flip_s_h_270)
 
-            # brighter segmented images
-            aug_segmented.append(segmented_img.copy())
-            aug_segmented.append(rot_s_90.copy())
-            aug_segmented.append(rot_s_180.copy())
-            aug_segmented.append(rot_s_270.copy())
-            aug_segmented.append(flip_s_h_org.copy())
-            aug_segmented.append(flip_s_h_90.copy())
-            aug_segmented.append(flip_s_h_180.copy())
-            aug_segmented.append(flip_s_h_270.copy())
-
-            # dimmer segmented images
-            aug_segmented.append(segmented_img.copy())
-            aug_segmented.append(rot_s_90.copy())
-            aug_segmented.append(rot_s_180.copy())
-            aug_segmented.append(rot_s_270.copy())
-            aug_segmented.append(flip_s_h_org.copy())
-            aug_segmented.append(flip_s_h_90.copy())
-            aug_segmented.append(flip_s_h_180.copy())
-            aug_segmented.append(flip_s_h_270.copy())
+            # # brighter segmented images
+            # aug_segmented.append(segmented_img.copy())
+            # aug_segmented.append(rot_s_90.copy())
+            # aug_segmented.append(rot_s_180.copy())
+            # aug_segmented.append(rot_s_270.copy())
+            # aug_segmented.append(flip_s_h_org.copy())
+            # aug_segmented.append(flip_s_h_90.copy())
+            # aug_segmented.append(flip_s_h_180.copy())
+            # aug_segmented.append(flip_s_h_270.copy())
+            #
+            # # dimmer segmented images
+            # aug_segmented.append(segmented_img.copy())
+            # aug_segmented.append(rot_s_90.copy())
+            # aug_segmented.append(rot_s_180.copy())
+            # aug_segmented.append(rot_s_270.copy())
+            # aug_segmented.append(flip_s_h_org.copy())
+            # aug_segmented.append(flip_s_h_90.copy())
+            # aug_segmented.append(flip_s_h_180.copy())
+            # aug_segmented.append(flip_s_h_270.copy())
 
             for i in range(0, len(aug_segmented)):
                 # saves all the augmented originals
@@ -440,11 +441,12 @@ class DataSetTool:
 
     def get_data_set(self):
         train_ids = os.listdir(PARENT_DIR + ORIGINAL_RESIZED_PATH)
+        sample_ds = random.sample(train_ids, 5000)
 
-        X_train = np.zeros((len(train_ids), IMG_WIDTH, IMG_HEIGHT, IMG_CHANNELS), dtype=np.uint8)
-        Y_train = np.zeros((len(train_ids), IMG_WIDTH, IMG_HEIGHT), dtype=np.bool)
+        X_train = np.zeros((len(sample_ds), IMG_WIDTH, IMG_HEIGHT, IMG_CHANNELS), dtype=np.uint8)
+        Y_train = np.zeros((len(sample_ds), IMG_WIDTH, IMG_HEIGHT), dtype=np.bool)
 
-        for n, id_ in tqdm(enumerate(train_ids), total=len(train_ids)):
+        for n, id_ in tqdm(enumerate(sample_ds), total=len(sample_ds)):
             # Actual train image
             # print(DST_PARENT_DIR + ORIGINAL_PATH + id_)
             img = imread(PARENT_DIR + ORIGINAL_RESIZED_PATH + id_.split(".")[0] + '.png')[:, :, :IMG_CHANNELS]
@@ -468,7 +470,7 @@ class DataSetTool:
         train_ids = os.listdir(PARENT_DIR + ORIGINAL_RESIZED_PATH)
         random_images_idx = random.sample(train_ids, 100)
         X_train = np.zeros((100, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
-        ground_truth = np.zeros((100, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+        ground_truth = np.zeros((100, IMG_HEIGHT, IMG_WIDTH, 1), dtype=np.uint8)
 
         for n, id_ in tqdm(enumerate(random_images_idx), total=len(random_images_idx)):
             img = imread(DST_PARENT_DIR + ORIGINAL_RESIZED_PATH + train_ids[n])[:, :,
@@ -477,6 +479,7 @@ class DataSetTool:
 
             mask = imread(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + train_ids[n].split('.')[0] + '.png')
 
+            # ground_truth[n] = mask
             ground_truth[n] = self.decode_binary_mask(mask)
 
         preds_train = model.predict(X_train, verbose=1)

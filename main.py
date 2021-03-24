@@ -13,9 +13,10 @@ unet_tool = Unet.Unet()
 # ds_tool.resize_segmented()
 # ds_tool.augment_data_set()
 
-model = unet_tool.create_binary_model()
+model = unet_tool.create_binary_model(learning_rate=0.0001)
 
 print('Do you want to train the model first? [y/n]')
+# to_train = 'y'
 to_train = input()
 
 # applies one hot encoding on label images
@@ -30,7 +31,7 @@ if to_train.lower() == 'y':
     if os.path.exists('./binary_semantic_segmentation.h5'):
         model.load_weights('binary_semantic_segmentation.h5')
 
-    metric = 'accuracy'
+    metric = 'val_accuracy'
 
     callbacks = [
         tf.keras.callbacks.TensorBoard(
@@ -39,13 +40,15 @@ if to_train.lower() == 'y':
                                            verbose=2, save_best_only=True, mode='max')
     ]
 
-    train_ds_batched, validation_ds_batched = ds_tool.get_input_pipeline()
+    train_ds_batched, validation_ds_batched = ds_tool.get_data_set()
 
     model.fit(train_ds_batched,
+              validation_ds_batched,
               # validation_data=validation_ds_batched,
+              validation_split=0.2,
               batch_size=16,
               callbacks=callbacks,
-              epochs=3,
+              epochs=420,
               verbose=1)
 
 # otherwise we load the weights from another run

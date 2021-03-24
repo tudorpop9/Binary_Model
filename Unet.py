@@ -26,7 +26,7 @@ class Unet:
         inputs = tf.keras.layers.Input((input_height, input_width, input_channels))
 
         # Converts pixel value to float, and normalizes it
-        s = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
+        float_layer = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
 
         c1 = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(
             inputs)
@@ -86,7 +86,7 @@ class Unet:
         adamOptimizer = tf.keras.optimizers.Adam(lr=learning_rate)
 
         model = tf.keras.Model(inputs=[inputs], outputs=[outputs])
-        model.compile(optimizer=adamOptimizer, loss='binary_crossentropy', metrics=['accuracy'], run_eagerly=True)
+        model.compile(optimizer='adam', loss='mean_squared_error', metrics=['accuracy'], run_eagerly=True)
         model.summary()
 
         return model
@@ -98,7 +98,7 @@ class Unet:
         inputs = tf.keras.layers.Input((input_height, input_width, input_channels))
 
         # Converts pixel value to float, and normalizes it
-        s = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
+        float_layer = tf.keras.layers.Lambda(lambda x: x / 255)(inputs)
 
         c1 = tf.keras.layers.Conv2D(16, (3, 3), activation='relu', kernel_initializer='he_normal', padding='same')(
             inputs)
