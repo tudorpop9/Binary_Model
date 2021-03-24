@@ -48,7 +48,7 @@ if to_train.lower() == 'y':
               validation_split=0.2,
               batch_size=16,
               callbacks=callbacks,
-              epochs=420,
+              epochs=250,
               verbose=1)
 
 # otherwise we load the weights from another run
