@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import random
 import threading
@@ -11,6 +12,8 @@ import numpy as np
 import tensorflow as tf
 from cv2 import cv2
 from skimage.io import imread, imshow
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import normalize
 from tqdm import tqdm
 import io
 from PIL import Image
@@ -522,4 +525,186 @@ class DataSetTool:
             print("Enter 0 to exit, any positive number to predict another image: ")
             continue_flag = input()
 
+    def _get_statistics_dict(self):
+        stats = {
+            '0': {'precision': 0.0,
+                  'recall': 0.0,
+                  'f1-score': 0.0,
+                  'support': 0},
+            '1': {'precision': 0.0,
+                  'recall': 0.0,
+                  'f1-score': 0.0,
+                  'support': 0},
+            '2': {'precision': 0.0,
+                  'recall': 0.0,
+                  'f1-score': 0.0,
+                  'support': 0},
+            '3': {'precision': 0.0,
+                  'recall': 0.0,
+                  'f1-score': 0.0,
+                  'support': 0},
+            '4': {'precision': 0.0,
+                  'recall': 0.0,
+                  'f1-score': 0.0,
+                  'support': 0},
+            '5': {'precision': 0.0,
+                  'recall': 0.0,
+                  'f1-score': 0.0,
+                  'support': 0},
+            'accuracy': 0.0,
+            'macro avg': {'precision': 0.0,
+                          'recall': 0.0,
+                          'f1-score': 0.0,
+                          'support': 0},
+            'weighted avg': {'precision': 0.0,
+                             'recall': 0.0,
+                             'f1-score': 0.0,
+                             'support': 0},
+        }
+        return stats
 
+    def print_per_class_statistics(self, validation_split, model: tf.keras.Model):
+
+        global normalized_conf_matrix, initial_conf_matrix
+        dict_stats_file = './binary_model_stats.json'
+
+        train_ids = os.listdir(PARENT_DIR + ORIGINAL_RESIZED_PATH)
+        random.shuffle(train_ids)
+        split_idx = int(len(train_ids) * validation_split)
+        validation_fragment = train_ids[:split_idx]
+        validation_size = len(validation_fragment)
+
+        batch_size = 4
+        batch_idx = 0
+        no_batches = 0
+
+        images = np.zeros((batch_size, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+        ground_truth = np.zeros((batch_size, IMG_HEIGHT, IMG_WIDTH), dtype=np.uint8)
+
+        stats = self._get_statistics_dict()
+        normalized_conf_matrix = np.zeros((1, 1), dtype=np.float)
+
+        for n, id_ in tqdm(enumerate(validation_fragment), total=len(validation_fragment)):
+            img = imread(DST_PARENT_DIR + ORIGINAL_RESIZED_PATH + train_ids[n])[:, :, :IMG_CHANNELS]
+            images[batch_idx] = img
+
+            mask = imread(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + train_ids[n].split('.')[0] + '.png')
+            ground_truth[batch_idx] = mask
+            batch_idx += 1
+
+            if batch_idx == batch_size - 1 or n == validation_size - 1:
+                batch_idx = 0
+                no_batches += 1
+
+                predictions = model.predict(images)
+                predictions_max_score = np.where(predictions > 0.5, 1, 0).flatten()
+                ground_truth_max_score = ground_truth.flatten()
+
+                # initial_conf_matrix = tf.math.confusion_matrix(num_classes=1,
+                #                                                labels=ground_truth_max_score,
+                #                                                predictions=predictions_max_score).numpy()
+                # normalized_conf_matrix += np.around(normalize(initial_conf_matrix, axis=1, norm='l1'), decimals=2)
+
+                report = classification_report(ground_truth_max_score, predictions_max_score, output_dict=True)
+
+                for label_i in report.keys():
+                    if label_i != 'accuracy':
+                        for metric in report[label_i].keys():
+                            stats[label_i][metric] += report[label_i][metric]
+                    else:
+                        stats[label_i] += report[label_i]
+
+        # final avg statistics
+        for label_i in stats.keys():
+            if label_i != 'accuracy':
+                for metric in stats[label_i].keys():
+                    stats[label_i][metric] /= no_batches
+            else:
+                stats[label_i] /= no_batches
+        print(stats)
+
+        # store it in a file
+        with open(dict_stats_file, 'w') as file:
+            json.dump(stats, file, indent=4)
+
+        # final confusion matrix
+        # normalized_conf_matrix = np.around(normalize(normalized_conf_matrix, axis=1, norm='l1'), decimals=2)
+        # print(normalized_conf_matrix)
+
+    def manual_model_testing_on_validation_set(self, model: tf.keras.Model, validation_split=0.2):
+        current_day = datetime.datetime.now()
+
+        train_ids = os.listdir(PARENT_DIR + ORIGINAL_RESIZED_PATH)
+        random.shuffle(train_ids)
+        split_idx = int(len(train_ids) * validation_split)
+        validation_fragment = train_ids[:split_idx]
+        validation_set_size = len(validation_fragment)
+
+        original_image_as_np_array = np.zeros((1, IMG_HEIGHT, IMG_WIDTH, IMG_CHANNELS), dtype=np.uint8)
+
+        print("Enter 0 to exit, any other number to predict an image: ")
+        continue_flag = input()
+
+        while int(continue_flag) > 0:
+
+            i = random.randint(0, validation_set_size - 1)
+            img_name = validation_fragment[i]
+            print("Chose a random image from validation set: " + str(i))
+
+            # generates paths for each image in the sample
+            original_img_path = "%s%s_original_%s" % (RESULTS_PATH,
+                                                      LABEL_TYPES_PATH + str(current_day.month).zfill(2) + str(
+                                                          current_day.day).zfill(2) + '/',
+                                                      img_name)
+            ground_truth_path = "%s%s_grTruth_%s" % (RESULTS_PATH,
+                                                     LABEL_TYPES_PATH + str(current_day.month).zfill(2) + str(
+                                                         current_day.day).zfill(2) + '/',
+                                                     img_name)
+            prediction_path = "%s%s_prediction_%s" % (RESULTS_PATH,
+                                                      LABEL_TYPES_PATH + str(current_day.month).zfill(2) + str(
+                                                          current_day.day).zfill(2) + '/',
+                                                      img_name)
+
+            # if the results directory for today does not exist, create it
+            today_result_dir = RESULTS_PATH + LABEL_TYPES_PATH + \
+                               str(current_day.month).zfill(2) + str(current_day.day).zfill(2)
+            if not os.path.exists(today_result_dir):
+                os.mkdir(today_result_dir)
+
+            # read the randomly chosen image and its ground-truth
+            img = imread(DST_PARENT_DIR + ORIGINAL_RESIZED_PATH + train_ids[i])[:, :, :IMG_CHANNELS]
+            original_image_as_np_array[0] = img
+
+            mask = imread(DST_PARENT_DIR + SEGMENTED_RESIZED_PATH + train_ids[i])
+
+            # parse the one-hot representation to rgb
+            print('Please wait, decoding ground-truth image.. ')
+            ground_truth = mask*255
+
+            # predict the random image
+            prediction_arr = model.predict(original_image_as_np_array)
+
+            # save and display sample
+            imshow(img)
+            # rgb_original = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            # cv2.imwrite(original_img_path, rgb_original)
+            plt.savefig(original_img_path)
+            plt.show()
+
+            imshow(np.squeeze(ground_truth))
+            # rgb_ground_truth = cv2.cvtColor(ground_truth, cv2.COLOR_BGR2RGB)
+            # cv2.imwrite(ground_truth_path, rgb_ground_truth)
+            plt.savefig(ground_truth_path)
+            plt.show()
+
+            print('Please wait, decoding the predicted image.. ')
+            # interpreted_prediction = np.where(prediction_arr > 0.5, 1, 0)
+            interpreted_prediction = prediction_arr[0]
+            imshow(np.squeeze(interpreted_prediction))
+            # rgb_interpreted_prediction = cv2.cvtColor(interpreted_prediction, cv2.COLOR_BGR2RGB)
+            # cv2.imwrite(prediction_path, rgb_interpreted_prediction)
+            plt.savefig(prediction_path)
+            plt.show()
+
+            print("Enter 0 to exit, any positive number to predict another image: ")
+            continue_flag = input()

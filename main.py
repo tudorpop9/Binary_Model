@@ -8,7 +8,6 @@ import Unet
 ds_tool = DataSetTool.DataSetTool()
 unet_tool = Unet.Unet()
 
-
 # ds_tool.resize_original()
 # ds_tool.resize_segmented()
 # ds_tool.augment_data_set()
@@ -56,4 +55,5 @@ else:
     model.load_weights('binary_semantic_segmentation.h5')
 
 # observing results
-ds_tool.manual_model_testing(model)
+ds_tool.manual_model_testing_on_validation_set(model, validation_split=0.2)
+# ds_tool.print_per_class_statistics(validation_split=0.2, model=model)
